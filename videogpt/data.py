@@ -183,7 +183,7 @@ class VideoData(pl.LightningDataModule):
             batch_size=self.hparams.batch_size,
             num_workers=self.hparams.num_workers,
             pin_memory=True,
-            shuffle=True
+            shuffle=train
         )
         return dataloader
 

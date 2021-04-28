@@ -21,6 +21,8 @@ def main():
     # pre-make relevant cached files if necessary
     data.train_dataloader()
     data.test_dataloader()
+    
+    args.n_channels = next(iter(data.test_dataloader()))['video'].shape[-4]
     model = VQVAE(args)
 
     callbacks = []

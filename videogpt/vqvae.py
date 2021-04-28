@@ -17,9 +17,8 @@ class VQVAE(pl.LightningModule):
         self.hparams = args
         self.embedding_dim = args.embedding_dim
         self.n_codes = args.n_codes
-
-        self.encoder = Encoder(args.n_hiddens, args.n_res_layers, args.downsample)
-        self.decoder = Decoder(args.n_hiddens, args.n_res_layers, args.downsample)
+        self.encoder = Encoder(args.n_hiddens, args.n_res_layers, args.downsample, args.n_channels)
+        self.decoder = Decoder(args.n_hiddens, args.n_res_layers, args.downsample, args.n_channels)
 
         self.pre_vq_conv = SamePadConv3d(args.n_hiddens, args.embedding_dim, 1)
         self.post_vq_conv = SamePadConv3d(args.embedding_dim, args.n_hiddens, 1)
@@ -210,13 +209,13 @@ class Codebook(nn.Module):
         return embeddings
 
 class Encoder(nn.Module):
-    def __init__(self, n_hiddens, n_res_layers, downsample):
+    def __init__(self, n_hiddens, n_res_layers, downsample, n_channels):
         super().__init__()
         n_times_downsample = np.array([int(math.log2(d)) for d in downsample])
         self.convs = nn.ModuleList()
         max_ds = n_times_downsample.max()
         for i in range(max_ds):
-            in_channels = 3 if i == 0 else n_hiddens
+            in_channels = n_channels if i == 0 else n_hiddens
             stride = tuple([2 if d > 0 else 1 for d in n_times_downsample])
             conv = SamePadConv3d(in_channels, n_hiddens, 4, stride=stride)
             self.convs.append(conv)
@@ -240,7 +239,7 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, n_hiddens, n_res_layers, upsample):
+    def __init__(self, n_hiddens, n_res_layers, upsample, n_channels):
         super().__init__()
         self.res_stack = nn.Sequential(
             *[AttentionResidualBlock(n_hiddens)
@@ -253,7 +252,7 @@ class Decoder(nn.Module):
         max_us = n_times_upsample.max()
         self.convts = nn.ModuleList()
         for i in range(max_us):
-            out_channels = 3 if i == max_us - 1 else n_hiddens
+            out_channels = n_channels if i == max_us - 1 else n_hiddens
             us = tuple([2 if d > 0 else 1 for d in n_times_upsample])
             convt = SamePadConvTranspose3d(n_hiddens, out_channels, 4,
                                            stride=us)
